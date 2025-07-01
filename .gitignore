@@ -1,0 +1,55 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+/.idea/deploymentTargetDropDown.xml
+/.idea/compiler.xml
+/.idea/misc.xml
+/.idea/kotlinc.xml
+/.idea/gradle.xml
+/.idea/kotlinScripting.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Archivos generados
+app/release/
+app/debug/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Archivos de configuración de usuario
+.idea/tasks.xml
+.idea/.name
+.idea/dictionaries
+.idea/shelf
+
+# Log Files
+*.log
+
+# Android Studio Navigation
+.navigation/
+
+# Version Control
+vcs.xml
+
+# Keystore files
+*.jks
+*.keystore
+
+# Google Services (e.g. APIs or Firebase)
+# No ignorar google-services.json si quieres que esté en el repositorio
+# google-services.json
+
+# Android Profiling
+*.hprof

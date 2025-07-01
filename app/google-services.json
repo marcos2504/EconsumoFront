@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "575643410417",
+    "project_id": "e-consumo-43223",
+    "storage_bucket": "e-consumo-43223.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:575643410417:android:02614a874d344d2666ae50",
+        "android_client_info": {
+          "package_name": "ar.um.econsumo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "575643410417-q9o33rqb4lv9qllpomc6v954fcg89o8v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ar.um.econsumo",
+            "certificate_hash": "2b599253a6830aa218e55e805880de8508a3af40"
+          }
+        },
+        {
+          "client_id": "575643410417-l5sbvsrooteah5h4bm9f4slm5e1ilnv3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5WN7TPUja5ufn9MYKQCsmWN7AgzGSAt0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "575643410417-l5sbvsrooteah5h4bm9f4slm5e1ilnv3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

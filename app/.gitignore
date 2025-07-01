@@ -1,0 +1,10 @@
+/build
+/release
+/debug
+/outputs
+/generated
+/intermediates
+*.apk
+*.aab
+*.ap_
+*.hprof
