@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -345,25 +346,36 @@ fun DatoConsumoItem(dato: DatoConsumo) {
 @Composable
 fun ConsumoLineChart(datos: List<DatoGrafico>) {
     val context = LocalContext.current
+    val colorPrimario = MaterialTheme.colorScheme.primary.toArgb()
+    val colorSecundario = MaterialTheme.colorScheme.secondary.toArgb()
+    val colorBackground = MaterialTheme.colorScheme.background.toArgb()
+    val colorOnBackground = MaterialTheme.colorScheme.onBackground.toArgb()
 
     AndroidView(
         factory = { context ->
             LineChart(context).apply {
                 description.isEnabled = false
-                legend.textSize = 14f
+                legend.apply {
+                    textSize = 14f
+                    textColor = colorOnBackground
+                }
                 axisLeft.apply {
                     setDrawGridLines(false)
                     axisMinimum = 0f
+                    textColor = colorOnBackground
                 }
                 axisRight.isEnabled = false
                 xAxis.apply {
                     position = XAxis.XAxisPosition.BOTTOM
                     granularity = 1f
                     setDrawGridLines(false)
+                    textColor = colorOnBackground
+                    labelRotationAngle = 30f
                 }
                 setTouchEnabled(true)
                 setPinchZoom(true)
                 setDrawGridBackground(false)
+                setBackgroundColor(colorBackground)
             }
         },
         modifier = Modifier.fillMaxSize(),
@@ -376,15 +388,36 @@ fun ConsumoLineChart(datos: List<DatoGrafico>) {
             chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
 
             val dataSet = LineDataSet(entries, "Consumo (kWh)").apply {
-                color = android.graphics.Color.BLUE
-                setCircleColor(android.graphics.Color.BLUE)
-                lineWidth = 2f
-                circleRadius = 4f
-                setDrawValues(false)
+                color = colorPrimario
+                lineWidth = 3f
+
+                // Configuración de puntos
+                setCircleColor(colorSecundario)
+                circleRadius = 5f
+                circleHoleRadius = 2.5f
+                circleHoleColor = colorBackground
+
+                // Configurar valores en el gráfico
+                setDrawValues(true)
+                valueTextSize = 12f
+                valueTextColor = colorOnBackground
+
+                // Agregar relleno debajo de la línea con transparencia
+                setDrawFilled(true)
+                fillColor = colorPrimario
+                fillAlpha = 50
+
+                // Hacer la línea más suave
+                mode = LineDataSet.Mode.CUBIC_BEZIER
+
+                // Highlight
+                highLightColor = colorSecundario
+                setDrawHighlightIndicators(true)
             }
 
             val lineData = LineData(dataSet)
             chart.data = lineData
+            chart.animateX(1000) // Añadir animación
             chart.invalidate()
         }
     )
@@ -392,6 +425,80 @@ fun ConsumoLineChart(datos: List<DatoGrafico>) {
 
 @Composable
 fun ResumenLineChart(datos: List<DatoGrafico>) {
-    // Similar a ConsumoLineChart pero adaptado para el formato de resumen
-    ConsumoLineChart(datos)
+    val context = LocalContext.current
+    val colorPrimario = MaterialTheme.colorScheme.tertiary.toArgb()  // Usar color terciario para diferenciar
+    val colorSecundario = MaterialTheme.colorScheme.secondary.toArgb()
+    val colorBackground = MaterialTheme.colorScheme.background.toArgb()
+    val colorOnBackground = MaterialTheme.colorScheme.onBackground.toArgb()
+
+    AndroidView(
+        factory = { context ->
+            LineChart(context).apply {
+                description.isEnabled = false
+                legend.apply {
+                    textSize = 14f
+                    textColor = colorOnBackground
+                }
+                axisLeft.apply {
+                    setDrawGridLines(false)
+                    axisMinimum = 0f
+                    textColor = colorOnBackground
+                }
+                axisRight.isEnabled = false
+                xAxis.apply {
+                    position = XAxis.XAxisPosition.BOTTOM
+                    granularity = 1f
+                    setDrawGridLines(false)
+                    textColor = colorOnBackground
+                    labelRotationAngle = 30f
+                }
+                setTouchEnabled(true)
+                setPinchZoom(true)
+                setDrawGridBackground(false)
+                setBackgroundColor(colorBackground)
+            }
+        },
+        modifier = Modifier.fillMaxSize(),
+        update = { chart ->
+            val entries = datos.mapIndexed { index, dato ->
+                Entry(index.toFloat(), dato.consumo)
+            }
+
+            val labels = datos.map { it.fecha }.toTypedArray()
+            chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
+
+            val dataSet = LineDataSet(entries, "Consumo Reciente (kWh)").apply {
+                color = colorPrimario
+                lineWidth = 3f
+
+                // Configuración de puntos
+                setCircleColor(colorSecundario)
+                circleRadius = 5f
+                circleHoleRadius = 2.5f
+                circleHoleColor = colorBackground
+
+                // Configurar valores en el gráfico
+                setDrawValues(true)
+                valueTextSize = 12f
+                valueTextColor = colorOnBackground
+
+                // Agregar relleno debajo de la línea con transparencia
+                setDrawFilled(true)
+                fillColor = colorPrimario
+                fillAlpha = 50
+
+                // Hacer la línea más suave
+                mode = LineDataSet.Mode.CUBIC_BEZIER
+
+                // Highlight
+                highLightColor = colorSecundario
+                setDrawHighlightIndicators(true)
+            }
+
+            val lineData = LineData(dataSet)
+            chart.data = lineData
+            chart.animateX(1000) // Añadir animación
+            chart.invalidate()
+        }
+    )
 }
