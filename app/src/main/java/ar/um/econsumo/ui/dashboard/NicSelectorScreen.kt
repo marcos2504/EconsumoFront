@@ -2,23 +2,26 @@ package ar.um.econsumo.ui.dashboard
 
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import ar.um.econsumo.data.SelectorItem
 import ar.um.econsumo.di.AppDependencies
 
 private const val TAG = "NicSelectorScreen"
@@ -33,6 +36,7 @@ fun NicSelectorScreen(navController: NavController) {
     // Estados del ViewModel
     val state by viewModel.state.collectAsState()
     val selectedNic by viewModel.selectedNic.collectAsState()
+    val selectedItem by viewModel.selectedItem.collectAsState()
 
     // Estado local para el menú desplegable
     var expanded by remember { mutableStateOf(false) }
@@ -40,7 +44,7 @@ fun NicSelectorScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Selección de NIC") },
+                title = { Text("Selección de Propiedad") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
@@ -69,7 +73,7 @@ fun NicSelectorScreen(navController: NavController) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "👤 Seleccioná tu NIC",
+                        text = "👤 Seleccioná tu propiedad",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
@@ -78,7 +82,7 @@ fun NicSelectorScreen(navController: NavController) {
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Seleccioná el NIC para consultar información sobre tu consumo eléctrico y facturas.",
+                        text = "Elegí la propiedad para consultar información sobre tu consumo eléctrico y facturas.",
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center
                     )
@@ -94,7 +98,7 @@ fun NicSelectorScreen(navController: NavController) {
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "Cargando NICs disponibles...",
+                                text = "Cargando propiedades disponibles...",
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -116,46 +120,26 @@ fun NicSelectorScreen(navController: NavController) {
                         }
 
                         is NicSelectorState.Success -> {
-                            val nics = (state as NicSelectorState.Success).nics
+                            val selectorItems = (state as NicSelectorState.Success).selectorItems
 
-                            if (nics.isEmpty()) {
+                            if (selectorItems.isEmpty()) {
                                 Text(
-                                    text = "No se encontraron NICs disponibles",
+                                    text = "No se encontraron propiedades disponibles",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.error
                                 )
                             } else {
-                                // Menú desplegable para seleccionar el NIC
-                                ExposedDropdownMenuBox(
+                                // Dropdown mejorado para seleccionar propiedad
+                                PropertySelectorDropdown(
+                                    items = selectorItems,
+                                    selectedItem = selectedItem,
                                     expanded = expanded,
-                                    onExpandedChange = { expanded = !expanded }
-                                ) {
-                                    OutlinedTextField(
-                                        value = selectedNic ?: "",
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        label = { Text("NIC") },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                        modifier = Modifier
-                                            .menuAnchor()
-                                            .fillMaxWidth()
-                                    )
-
-                                    ExposedDropdownMenu(
-                                        expanded = expanded,
-                                        onDismissRequest = { expanded = false }
-                                    ) {
-                                        nics.forEach { nic ->
-                                            DropdownMenuItem(
-                                                text = { Text(nic) },
-                                                onClick = {
-                                                    viewModel.selectNic(nic)
-                                                    expanded = false
-                                                }
-                                            )
-                                        }
+                                    onExpandedChange = { expanded = it },
+                                    onItemSelected = { item ->
+                                        viewModel.selectNic(item.value, item)
+                                        expanded = false
                                     }
-                                }
+                                )
 
                                 Spacer(modifier = Modifier.height(32.dp))
 
@@ -169,7 +153,7 @@ fun NicSelectorScreen(navController: NavController) {
                                             if (viewModel.isNicSelected()) {
                                                 navController.navigate("consumo_historico/${viewModel.getSelectedNic()}")
                                             } else {
-                                                Toast.makeText(context, "Seleccioná un NIC válido", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, "Seleccioná una propiedad válida", Toast.LENGTH_SHORT).show()
                                             }
                                         },
                                         modifier = Modifier.weight(1f),
@@ -188,13 +172,13 @@ fun NicSelectorScreen(navController: NavController) {
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                // Nuevo botón para consultar anomalías con JWT
+                                // Botón para consultar anomalías
                                 Button(
                                     onClick = {
                                         if (viewModel.isNicSelected()) {
                                             navController.navigate("anomalias/${viewModel.getSelectedNic()}")
                                         } else {
-                                            Toast.makeText(context, "Seleccioná un NIC válido", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "Seleccioná una propiedad válida", Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
@@ -212,13 +196,11 @@ fun NicSelectorScreen(navController: NavController) {
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
+                                // Botón para volver a sincronizar facturas
                                 Button(
                                     onClick = {
-                                        if (viewModel.isNicSelected()) {
-                                            navController.navigate("dashboard?nic=${viewModel.getSelectedNic()}")
-                                        } else {
-                                            Toast.makeText(context, "Seleccioná un NIC válido", Toast.LENGTH_SHORT).show()
-                                        }
+                                        // Navegar a la sincronización con parámetro forzar_sync=true
+                                        navController.navigate("sync?forzar_sync=true")
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = ButtonDefaults.buttonColors(
@@ -226,11 +208,11 @@ fun NicSelectorScreen(navController: NavController) {
                                     )
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Home,
+                                        imageVector = Icons.Default.Refresh,
                                         contentDescription = null
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Dashboard")
+                                    Text("Sincronizar más facturas")
                                 }
                             }
                         }
@@ -239,6 +221,93 @@ fun NicSelectorScreen(navController: NavController) {
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PropertySelectorDropdown(
+    items: List<SelectorItem>,
+    selectedItem: SelectorItem?,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onItemSelected: (SelectorItem) -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // Dropdown mejorado para seleccionar propiedad
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { onExpandedChange(it) },
+        ) {
+            OutlinedTextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                readOnly = true,
+                value = selectedItem?.label ?: "Seleccionar propiedad",
+                onValueChange = {},
+                label = { Text("Seleccionar propiedad") },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                }
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { onExpandedChange(false) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 350.dp)
+            ) {
+                items.forEach { item ->
+                    PropertyDropdownItem(
+                        item = item,
+                        onClick = { onItemSelected(item) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PropertyDropdownItem(
+    item: SelectorItem,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ),
+        onClick = onClick
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = item.subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

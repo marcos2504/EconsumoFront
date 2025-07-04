@@ -2,6 +2,7 @@ package ar.um.econsumo.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ar.um.econsumo.data.SelectorItem
 import ar.um.econsumo.data.repository.NicRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,8 +13,7 @@ import kotlinx.coroutines.launch
  */
 sealed class NicSelectorState {
     object Loading : NicSelectorState()
-    // Estado de no autenticado eliminado, ya que nunca debería mostrarse en esta pantalla
-    data class Success(val nics: List<String>) : NicSelectorState()
+    data class Success(val selectorItems: List<SelectorItem>) : NicSelectorState()
     data class Error(val message: String) : NicSelectorState()
 }
 
@@ -23,12 +23,16 @@ sealed class NicSelectorState {
 class NicSelectorViewModel(private val nicRepository: NicRepository) : ViewModel() {
 
     // Estado de la pantalla
-    private val _state = MutableStateFlow<NicSelectorState>(NicSelectorState.Loading) // Iniciar en Loading
+    private val _state = MutableStateFlow<NicSelectorState>(NicSelectorState.Loading)
     val state: StateFlow<NicSelectorState> = _state
 
     // NIC seleccionado actualmente
     private val _selectedNic = MutableStateFlow<String?>(null)
     val selectedNic: StateFlow<String?> = _selectedNic
+
+    // Item seleccionado actualmente (con datos enriquecidos)
+    private val _selectedItem = MutableStateFlow<SelectorItem?>(null)
+    val selectedItem: StateFlow<SelectorItem?> = _selectedItem
 
     // Iniciar cargando NICs automáticamente
     init {
@@ -44,12 +48,14 @@ class NicSelectorViewModel(private val nicRepository: NicRepository) : ViewModel
 
         viewModelScope.launch {
             try {
-                val nics = nicRepository.getTodosLosNics()
-                _state.value = NicSelectorState.Success(nics)
+                val response = nicRepository.getNicsConDetalle()
+                _state.value = NicSelectorState.Success(response.selectorItems)
 
                 // Seleccionar el primer NIC por defecto si hay alguno disponible
-                if (nics.isNotEmpty() && _selectedNic.value == null) {
-                    _selectedNic.value = nics[0]
+                if (response.selectorItems.isNotEmpty() && _selectedNic.value == null) {
+                    val primerItem = response.selectorItems[0]
+                    _selectedNic.value = primerItem.value
+                    _selectedItem.value = primerItem
                 }
             } catch (e: Exception) {
                 _state.value = NicSelectorState.Error(e.message ?: "Error desconocido")
@@ -60,8 +66,9 @@ class NicSelectorViewModel(private val nicRepository: NicRepository) : ViewModel
     /**
      * Actualiza el NIC seleccionado
      */
-    fun selectNic(nic: String) {
+    fun selectNic(nic: String, item: SelectorItem) {
         _selectedNic.value = nic
+        _selectedItem.value = item
     }
 
     /**
@@ -76,5 +83,12 @@ class NicSelectorViewModel(private val nicRepository: NicRepository) : ViewModel
      */
     fun getSelectedNic(): String {
         return _selectedNic.value ?: ""
+    }
+
+    /**
+     * Obtiene el item seleccionado completo
+     */
+    fun getSelectedItem(): SelectorItem? {
+        return _selectedItem.value
     }
 }

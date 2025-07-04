@@ -37,7 +37,7 @@ fun GoogleAuthScreen(
             .requestProfile()
             .requestId() // Solicita el ID del usuario
             .requestIdToken(webClientId) // Solicita un token ID para autenticación
-            .requestServerAuthCode(webClientId, false) // Forzar que siempre solicite consentimiento
+            .requestServerAuthCode(webClientId, true) // TRUE para forzar que siempre solicite consentimiento y obtener un serverAuthCode fresco
             .requestScopes(
                 Scope("https://www.googleapis.com/auth/gmail.readonly"),  // Scope para leer emails
                 Scope("https://www.googleapis.com/auth/userinfo.email"),  // Email explícito
@@ -46,24 +46,10 @@ fun GoogleAuthScreen(
             .build()
     }
 
-    // Forzar nuevo consentimiento si es necesario
+    // Forzar nuevo consentimiento siempre para asegurar obtener un server auth code
     LaunchedEffect(Unit) {
-        // Verificar si ya tenemos permisos adecuados
-        val account = GoogleSignIn.getLastSignedInAccount(context)
-        if (account != null) {
-            val hasRequiredScopes = GoogleSignIn.hasPermissions(
-                account,
-                Scope("https://www.googleapis.com/auth/gmail.readonly"),
-                Scope("https://www.googleapis.com/auth/userinfo.email"),
-                Scope("https://www.googleapis.com/auth/userinfo.profile")
-            )
-
-            // Si no tenemos todos los permisos, cerrar sesión para forzar nueva solicitud
-            if (!hasRequiredScopes) {
-                Log.d("GoogleAuthScreen", "No se tienen todos los permisos necesarios, cerrando sesión...")
-                GoogleSignIn.getClient(context, gso).signOut()
-            }
-        }
+        Log.d("GoogleAuthScreen", "Cerrando sesión para forzar nuevo consentimiento y obtener server auth code...")
+        GoogleSignIn.getClient(context, gso).signOut()
     }
 
     val googleSignInClient = remember { GoogleSignIn.getClient(context, gso) }
@@ -74,25 +60,35 @@ fun GoogleAuthScreen(
         try {
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             val account = task.getResult(ApiException::class.java)
-            // Log para debug
-            Log.d("GoogleAuthScreen", "Autenticación exitosa: ${account.email}")
 
             account?.let {
                 val userEmail = it.email ?: return@let
                 val serverAuthCode = it.serverAuthCode
                 val idToken = it.idToken
 
-                Log.d("GoogleAuthScreen", "Email: $userEmail, ID Token: ${idToken != null}")
+                // Logs detallados para depuración
+                Log.d("GoogleAuthScreen", "Autenticación exitosa: $userEmail")
+                Log.d("GoogleAuthScreen", "ID Token disponible: ${idToken != null}")
 
-                if (idToken != null) {
-                    // Usar el nuevo endpoint específico para Android
+                if (serverAuthCode != null) {
+                    Log.d("GoogleAuthScreen", "Server Auth Code obtenido (${serverAuthCode.length} caracteres): ${serverAuthCode.take(10)}...")
+                } else {
+                    Log.e("GoogleAuthScreen", "¡NO SE OBTUVO SERVER AUTH CODE! Verifica que requestServerAuthCode tiene el parámetro force=true")
+                }
+
+                if (idToken != null && serverAuthCode != null) {
+                    // Enviar tanto el idToken como el serverAuthCode al backend
+                    Log.d("GoogleAuthScreen", "Enviando idToken y serverAuthCode al backend...")
                     viewModel.androidOAuth(userEmail, idToken, serverAuthCode)
                 } else {
-                    viewModel.setError("No se pudo obtener el token de ID")
+                    if (idToken == null) {
+                        viewModel.setError("No se pudo obtener el ID token necesario")
+                    } else {
+                        viewModel.setError("No se pudo obtener el server auth code necesario")
+                    }
                 }
             }
         } catch (e: ApiException) {
-            // Log para debug
             Log.e("GoogleAuthScreen", "Error de autenticación: ${e.statusCode}", e)
 
             // Manejo especial para el error 12501 (usuario canceló)

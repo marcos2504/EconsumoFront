@@ -15,13 +15,31 @@ interface ApiService {
     @GET("facturas/nics")
     fun getTodosLosNics(): Call<List<String>>
 
-    // Endpoints JWT para consulta de consumo y anomalías
+    // Endpoint correcto que utiliza JWT para obtener NICs del usuario autenticado
+    @GET("facturas/nics_con_jwt")
+    fun getNicsConJwt(): Call<NicsResponse>
+
+    // Endpoints para consulta de consumo y anomalías
     @GET("anomalias/consultar_consumo/{nic}")
     fun consultarConsumo(@Path("nic") nic: String): Call<ConsumoResponse>
 
+    @GET("anomalias/ultimo_consumo/{nic}")
+    fun consultarUltimoConsumo(@Path("nic") nic: String): Call<UltimoConsumoResponse>
+
+    @GET("anomalias/ultimo_consumo_con_jwt/{nic}")
+    fun consultarUltimoConsumoConJwt(@Path("nic") nic: String): Call<UltimoConsumoResponse>
+
+    @GET("anomalias/todas_anomalias/{nic}")
+    fun verTodasAnomalias(@Path("nic") nic: String): Call<AnomaliasJwtResponse>
+
+    @GET("anomalias/todas_anomalias_con_jwt/{nic}")
+    fun verTodasAnomaliasConJwt(@Path("nic") nic: String): Call<AnomaliasJwtResponse>
+
+    // Para compatibilidad con código existente
     @GET("anomalias/alerta_con_jwt/{nic}")
     fun getAlertaConJwt(@Path("nic") nic: String): Call<AlertaJwtResponse>
 
+    // Para compatibilidad con código existente
     @GET("anomalias/anomalias_con_jwt/{nic}")
     fun getAnomaliasConJwt(@Path("nic") nic: String): Call<AnomaliasJwtResponse>
 
@@ -102,9 +120,20 @@ interface ApiService {
         @Query("orden") orden: String?
     ): Call<HistoricoFiltradoResponse>
 
+    @GET("facturas/estado_sync")
+    fun getEstadoSync(): Call<EstadoSyncResponse>
+
+    @POST("facturas/sync_inteligente_con_jwt")
+    fun syncInteligente(
+        @Query("max_emails") maxEmails: Int = 10,
+        @Query("forzar_sync") forzarSync: Boolean = false
+    ): Call<SyncResponse>
+
     @GET("historico/por_periodo/{nic}")
     fun getHistoricoPorPeriodo(
         @Path("nic") nic: String,
         @Query("periodo") periodo: String
     ): Call<HistoricoResponse>
 }
+
+

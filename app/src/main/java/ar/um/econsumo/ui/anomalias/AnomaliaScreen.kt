@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import ar.um.econsumo.data.AlertaInfo
 import ar.um.econsumo.data.ResumenConsumo
+import ar.um.econsumo.data.UltimoConsumoResponse
 import ar.um.econsumo.di.AppDependencies
 import java.text.SimpleDateFormat
 import java.util.*
@@ -27,10 +28,12 @@ import java.util.*
 fun AnomaliaScreen(navController: NavController, nic: String) {
     val viewModel = remember { AppDependencies.getAnomaliaViewModel() }
     val uiState by viewModel.uiState.collectAsState()
+    val ultimoConsumoState by viewModel.ultimoConsumoState.collectAsState()
 
     // Cargar datos al entrar a la pantalla
     LaunchedEffect(key1 = nic) {
         viewModel.consultarConsumo(nic)
+        viewModel.consultarUltimoConsumo(nic)
     }
 
     Scaffold(
@@ -59,6 +62,7 @@ fun AnomaliaScreen(navController: NavController, nic: String) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Pantalla principal - Mostrar los datos completos de consumo
             when (uiState) {
                 is AnomaliaUIState.Loading -> {
                     Box(
@@ -88,12 +92,24 @@ fun AnomaliaScreen(navController: NavController, nic: String) {
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    // Información de la alerta actual
-                    AlertaCard(
-                        resumen = consumoData.resumen,
-                        alertaActual = consumoData.alertaActual,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    // Si tenemos datos del último consumo (más detallados), los mostramos
+                    when (ultimoConsumoState) {
+                        is UltimoConsumoUIState.Success -> {
+                            val ultimoConsumo = (ultimoConsumoState as UltimoConsumoUIState.Success).data
+                            UltimoConsumoCard(
+                                ultimoConsumo = ultimoConsumo,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        else -> {
+                            // Si no tenemos datos del último consumo, mostramos la información general
+                            AlertaCard(
+                                resumen = consumoData.resumen,
+                                alertaActual = consumoData.alertaActual,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
 
                     // Botón para ver todas las anomalías
                     Button(
@@ -111,7 +127,7 @@ fun AnomaliaScreen(navController: NavController, nic: String) {
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Ver todas las anomalías (${consumoData.resumen.totalAnomalias})")
+                        Text("Ver todas las anomalías ")
                     }
                 }
             }
@@ -357,6 +373,200 @@ fun ErrorCard(mensaje: String, modifier: Modifier = Modifier) {
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
+        }
+    }
+}
+
+@Composable
+fun UltimoConsumoCard(
+    ultimoConsumo: UltimoConsumoResponse,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Estado de anomalía
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                if (ultimoConsumo.esAnomalia == true) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Advertencia",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "¡ANOMALÍA DETECTADA!",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    Text(
+                        text = "Consumo Normal",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Información del último consumo
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = "Último consumo registrado:",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (ultimoConsumo.fecha != null && ultimoConsumo.consumoKwh != null) {
+                    val fechaFormateada = try {
+                        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                        val outputFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                        val date = inputFormat.parse(ultimoConsumo.fecha)
+                        outputFormat.format(date ?: Date())
+                    } catch (e: Exception) {
+                        ultimoConsumo.fecha
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Fecha:",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = fechaFormateada,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Consumo:",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "${ultimoConsumo.consumoKwh} kWh",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    if (ultimoConsumo.variacionTrimestre != null) {
+                        val variacion = ultimoConsumo.variacionTrimestre
+                        val esPositivo = variacion > 0
+                        val colorVariacion = when {
+                            esPositivo -> MaterialTheme.colorScheme.error
+                            else -> MaterialTheme.colorScheme.primary
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Variación vs. trimestre anterior:",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+
+                            Text(
+                                text = "${if (esPositivo) "+" else ""}${String.format("%.2f", variacion)}%",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = colorVariacion
+                            )
+                        }
+                    }
+
+                    // Mostrar el score de anomalía si está disponible
+                    if (ultimoConsumo.scoreAnomalia != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Score de anomalía:",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+
+                            val scoreFormatted = String.format("%.2f", ultimoConsumo.scoreAnomalia)
+                            val scoreColor = when {
+                                ultimoConsumo.esAnomalia == true -> MaterialTheme.colorScheme.error
+                                else -> MaterialTheme.colorScheme.primary
+                            }
+
+                            Text(
+                                text = scoreFormatted,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = scoreColor
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "No hay datos de consumo disponibles",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Mensaje de explicación
+            if (!ultimoConsumo.mensaje.isNullOrBlank()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = if (ultimoConsumo.esAnomalia == true)
+                        MaterialTheme.colorScheme.errorContainer
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = ultimoConsumo.mensaje,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(12.dp),
+                        color = if (ultimoConsumo.esAnomalia == true)
+                            MaterialTheme.colorScheme.onErrorContainer
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

@@ -13,24 +13,6 @@ data class ConsumoResponse(
     val resumen: ResumenConsumo
 )
 
-data class AlertaInfo(
-    val nic: String? = null,
-    val fecha: String? = null,
-    @SerializedName("consumo_kwh") val consumoKwh: Double? = null,
-    val anomalia: Boolean? = null,
-    val estado: String? = null,
-    @SerializedName("comparado_trimestre") val comparadoTrimestre: Double? = null,
-    val mensaje: String? = null
-)
-
-data class AnomaliaInfo(
-    val fecha: String? = null,
-    @SerializedName("consumo_kwh") val consumoKwh: Double? = null,
-    val anomalia: Int? = null,
-    @SerializedName("comparado_trimestre") val comparadoTrimestre: Double? = null,
-    val mensaje: String? = null
-)
-
 data class ResumenConsumo(
     @SerializedName("tiene_anomalia_actual") val tieneAnomaliaActual: Boolean,
     @SerializedName("total_anomalias") val totalAnomalias: Int,
@@ -38,3 +20,6 @@ data class ResumenConsumo(
     @SerializedName("fecha_ultimo") val fechaUltimo: String?,
     @SerializedName("variacion_porcentual") val variacionPorcentual: Double?
 )
+
+// La clase AlertaInfo está ahora en su propio archivo
+// La clase AnomaliaInfo está ahora en su propio archivo

@@ -28,7 +28,7 @@ fun AnomaliaListScreen(navController: NavController, nic: String) {
 
     // Cargar datos al entrar a la pantalla
     LaunchedEffect(key1 = nic) {
-        viewModel.obtenerTodasLasAnomalias(nic)
+        viewModel.obtenerTodasLasAnomalias(nic, true) // Usar JWT para mayor seguridad
     }
 
     Scaffold(
@@ -77,6 +77,7 @@ fun AnomaliaListScreen(navController: NavController, nic: String) {
                 is AnomaliasListUIState.Success -> {
                     val anomaliasData = (listUiState as AnomaliasListUIState.Success).data
 
+                    // Tarjeta de información general
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp)
@@ -96,9 +97,39 @@ fun AnomaliaListScreen(navController: NavController, nic: String) {
                             Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
-                                text = "${anomaliasData.totalAnomalias} anomalías encontradas",
+                                text = "${anomaliasData.resumen.totalAnomalias} anomalías encontradas",
                                 style = MaterialTheme.typography.bodyMedium
                             )
+
+                            // Mostrar resumen de estadísticas
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Periodo analizado: ${anomaliasData.resumen.periodoAnalizado}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "Normal: ${anomaliasData.resumen.consumosNormales}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                                Text(
+                                    text = "•",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text(
+                                    text = "Anomalías: ${anomaliasData.resumen.totalAnomalias} (${anomaliasData.resumen.porcentajeAnomalias}%)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                            }
                         }
                     }
 
@@ -140,7 +171,8 @@ fun AnomaliaListScreen(navController: NavController, nic: String) {
 
 @Composable
 fun AnomaliaItemCard(anomalia: AnomaliaInfo) {
-    val esAnomalia = anomalia.anomalia == -1
+    // Usar la nueva propiedad esAnomalia que es Boolean (o usar false como default si es null)
+    val esAnomalia = anomalia.esAnomalia ?: false
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -185,6 +217,7 @@ fun AnomaliaItemCard(anomalia: AnomaliaInfo) {
                         MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
+                // Usar el icono devuelto del backend si está disponible
                 if (esAnomalia) {
                     Icon(
                         imageVector = Icons.Default.Warning,
@@ -224,8 +257,37 @@ fun AnomaliaItemCard(anomalia: AnomaliaInfo) {
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Variación porcentual
-            anomalia.comparadoTrimestre?.let { variacion ->
+            // Mostrar tipo de anomalía si está disponible
+            if (!anomalia.tipoAnomalia.isNullOrBlank()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Tipo:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (esAnomalia)
+                            MaterialTheme.colorScheme.onErrorContainer
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Text(
+                        text = anomalia.tipoAnomalia,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (esAnomalia)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            // Variación porcentual (ahora se llama variacionTrimestre)
+            anomalia.variacionTrimestre?.let { variacion ->
                 val esPositivo = variacion > 0
 
                 Row(
@@ -248,6 +310,35 @@ fun AnomaliaItemCard(anomalia: AnomaliaInfo) {
                         color = if (esAnomalia)
                             MaterialTheme.colorScheme.error
                         else if (esPositivo)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            // Mostrar score de anomalía si está disponible
+            anomalia.scoreAnomalia?.let { score ->
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Score:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (esAnomalia)
+                            MaterialTheme.colorScheme.onErrorContainer
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Text(
+                        text = String.format("%.2f", score),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (esAnomalia)
                             MaterialTheme.colorScheme.error
                         else
                             MaterialTheme.colorScheme.primary

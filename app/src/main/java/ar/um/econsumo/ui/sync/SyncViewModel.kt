@@ -2,6 +2,7 @@ package ar.um.econsumo.ui.sync
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ar.um.econsumo.data.EstadoSyncResponse
 import ar.um.econsumo.data.SyncResponse
 import ar.um.econsumo.data.repository.AuthRepository
 import ar.um.econsumo.data.repository.SyncRepository
@@ -15,8 +16,10 @@ import kotlinx.coroutines.launch
 sealed class SyncState {
     object Initial : SyncState()
     object Loading : SyncState()
+    object Checking : SyncState()
     data class Success(val response: SyncResponse) : SyncState()
     data class Error(val message: String) : SyncState()
+    data class EstadoVerificado(val estado: EstadoSyncResponse) : SyncState()
 }
 
 /**
@@ -31,6 +34,23 @@ class SyncViewModel(
     val syncState: StateFlow<SyncState> = _syncState
 
     /**
+     * Verifica si el usuario necesita hacer sincronización inicial
+     */
+    fun verificarEstadoSync() {
+        _syncState.value = SyncState.Checking
+
+        viewModelScope.launch {
+            syncRepository.verificarEstadoSync()
+                .onSuccess { estadoSync ->
+                    _syncState.value = SyncState.EstadoVerificado(estadoSync)
+                }
+                .onFailure { error ->
+                    _syncState.value = SyncState.Error(error.message ?: "Error al verificar estado de sincronización")
+                }
+        }
+    }
+
+    /**
      * Sincroniza las facturas con el número dado de emails
      */
     fun syncFacturas(maxEmails: Int) {
@@ -38,6 +58,23 @@ class SyncViewModel(
 
         viewModelScope.launch {
             syncRepository.syncFacturas(maxEmails)
+                .onSuccess { response ->
+                    _syncState.value = SyncState.Success(response)
+                }
+                .onFailure { error ->
+                    _syncState.value = SyncState.Error(error.message ?: "Error desconocido")
+                }
+        }
+    }
+
+    /**
+     * Sincroniza las facturas de forma inteligente usando JWT
+     */
+    fun syncInteligente(maxEmails: Int, forzarSync: Boolean = false) {
+        _syncState.value = SyncState.Loading
+
+        viewModelScope.launch {
+            syncRepository.syncInteligente(maxEmails, forzarSync)
                 .onSuccess { response ->
                     _syncState.value = SyncState.Success(response)
                 }

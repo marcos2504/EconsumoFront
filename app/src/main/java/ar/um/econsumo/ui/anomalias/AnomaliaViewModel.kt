@@ -1,6 +1,5 @@
 package ar.um.econsumo.ui.anomalias
 
-import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +19,12 @@ sealed class AnomaliaUIState {
     data class Error(val message: String) : AnomaliaUIState()
 }
 
+sealed class UltimoConsumoUIState {
+    object Loading : UltimoConsumoUIState()
+    data class Success(val data: UltimoConsumoResponse) : UltimoConsumoUIState()
+    data class Error(val message: String) : UltimoConsumoUIState()
+}
+
 sealed class AnomaliasListUIState {
     object Loading : AnomaliasListUIState()
     data class Success(val data: AnomaliasJwtResponse) : AnomaliasListUIState()
@@ -30,6 +35,9 @@ class AnomaliaViewModel(private val apiService: ApiService) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AnomaliaUIState>(AnomaliaUIState.Loading)
     val uiState: StateFlow<AnomaliaUIState> = _uiState
+
+    private val _ultimoConsumoState = MutableStateFlow<UltimoConsumoUIState>(UltimoConsumoUIState.Loading)
+    val ultimoConsumoState: StateFlow<UltimoConsumoUIState> = _ultimoConsumoState
 
     private val _listUiState = MutableStateFlow<AnomaliasListUIState>(AnomaliasListUIState.Loading)
     val listUiState: StateFlow<AnomaliasListUIState> = _listUiState
@@ -58,14 +66,68 @@ class AnomaliaViewModel(private val apiService: ApiService) : ViewModel() {
         })
     }
 
-    fun obtenerTodasLasAnomalias(nic: String) {
+    fun consultarUltimoConsumo(nic: String) {
+        _ultimoConsumoState.value = UltimoConsumoUIState.Loading
+
+        apiService.consultarUltimoConsumo(nic).enqueue(object : Callback<UltimoConsumoResponse> {
+            override fun onResponse(call: Call<UltimoConsumoResponse>, response: Response<UltimoConsumoResponse>) {
+                if (response.isSuccessful) {
+                    response.body()?.let { consumoResponse ->
+                        Log.d(TAG, "Último consumo consultado con éxito: ${consumoResponse.nic}")
+                        _ultimoConsumoState.value = UltimoConsumoUIState.Success(consumoResponse)
+                    } ?: run {
+                        _ultimoConsumoState.value = UltimoConsumoUIState.Error("Respuesta vacía del servidor")
+                    }
+                } else {
+                    _ultimoConsumoState.value = UltimoConsumoUIState.Error("Error ${response.code()}: ${response.message()}")
+                }
+            }
+
+            override fun onFailure(call: Call<UltimoConsumoResponse>, t: Throwable) {
+                Log.e(TAG, "Error al consultar último consumo", t)
+                _ultimoConsumoState.value = UltimoConsumoUIState.Error("Error de conexión: ${t.message}")
+            }
+        })
+    }
+
+    fun consultarUltimoConsumoConJwt(nic: String) {
+        _ultimoConsumoState.value = UltimoConsumoUIState.Loading
+
+        apiService.consultarUltimoConsumoConJwt(nic).enqueue(object : Callback<UltimoConsumoResponse> {
+            override fun onResponse(call: Call<UltimoConsumoResponse>, response: Response<UltimoConsumoResponse>) {
+                if (response.isSuccessful) {
+                    response.body()?.let { consumoResponse ->
+                        Log.d(TAG, "Último consumo consultado con JWT: ${consumoResponse.nic}")
+                        _ultimoConsumoState.value = UltimoConsumoUIState.Success(consumoResponse)
+                    } ?: run {
+                        _ultimoConsumoState.value = UltimoConsumoUIState.Error("Respuesta vacía del servidor")
+                    }
+                } else {
+                    _ultimoConsumoState.value = UltimoConsumoUIState.Error("Error ${response.code()}: ${response.message()}")
+                }
+            }
+
+            override fun onFailure(call: Call<UltimoConsumoResponse>, t: Throwable) {
+                Log.e(TAG, "Error al consultar último consumo con JWT", t)
+                _ultimoConsumoState.value = UltimoConsumoUIState.Error("Error de conexión: ${t.message}")
+            }
+        })
+    }
+
+    fun obtenerTodasLasAnomalias(nic: String, useJwt: Boolean = false) {
         _listUiState.value = AnomaliasListUIState.Loading
 
-        apiService.getAnomaliasConJwt(nic).enqueue(object : Callback<AnomaliasJwtResponse> {
+        val call = if (useJwt) {
+            apiService.verTodasAnomaliasConJwt(nic)
+        } else {
+            apiService.verTodasAnomalias(nic)
+        }
+
+        call.enqueue(object : Callback<AnomaliasJwtResponse> {
             override fun onResponse(call: Call<AnomaliasJwtResponse>, response: Response<AnomaliasJwtResponse>) {
                 if (response.isSuccessful) {
                     response.body()?.let { anomaliasResponse ->
-                        Log.d(TAG, "Anomalías obtenidas con éxito: ${anomaliasResponse.anomalias.size}")
+                        Log.d(TAG, "Anomalías obtenidas con éxito:")
                         _listUiState.value = AnomaliasListUIState.Success(anomaliasResponse)
                     } ?: run {
                         _listUiState.value = AnomaliasListUIState.Error("Respuesta vacía del servidor")
